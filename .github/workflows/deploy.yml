@@ -1,0 +1,57 @@
+name: Deploy to AWS
+on:
+  push:
+    branches:
+      - main
+# permissions:
+#   id-token: write
+#   contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.23
+
+      - name: Install dependencies
+        run: go mod tidy
+      - name: Build Go binary
+        run: GOOS=linux GOARCH=amd64 go build -o bootstrap main.go
+
+      - name: Zip binary
+        run: zip function.zip bootstrap
+#       - name: Setup aws-sam
+#         uses: aws-actions/setup-sam@v2
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: <oidc-role-arn>
+#           aws-region: ap-northeast-1
+
+#       - run: aws sts get-caller-identity
+
+#       - name: Upload to S3
+#         run: |
+#           aws s3 cp function.zip s3://<bucket-name>/function.zip
+
+#       - name: Configure AWS credentials again
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: <oidc-role-arn>
+#           aws-region: ap-northeast-1
+
+#       - name: Deploy CloudFormation stack
+#         run: |
+#           aws cloudformation deploy \
+#             --template-file cloudformation-template.yaml \
+#             --stack-name my-api-stack \
+#             --capabilities CAPABILITY_NAMED_IAM \
+#             --role-arn <cloudformation-role-arn>

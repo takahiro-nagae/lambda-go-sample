@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  MyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: MyLambdaFunction
+      Handler: main
+      Role: <lambda-role-arn>
+      Code:
+        S3Bucket: <bucket-name>
+        S3Key: function.zip
+      Runtime: provided.al2
+      Timeout: 10
+
+  MyApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: MyApi
+
+  MyApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt MyApiGateway.RootResourceId
+      PathPart: hello
+      RestApiId: !Ref MyApiGateway
+
+  MyApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: GET
+      ResourceId: !Ref MyApiGatewayResource
+      RestApiId: !Ref MyApiGateway
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - { LambdaArn: !GetAtt MyLambdaFunction.Arn }
+
+  MyLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref MyLambdaFunction
+      Principal: apigateway.amazonaws.com
+
+  MyApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref MyApiGateway
+    DependsOn: MyApiGatewayMethod
+
+  MyApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: prod
+      DeploymentId: !Ref MyApiGatewayDeployment
+      RestApiId: !Ref MyApiGateway
